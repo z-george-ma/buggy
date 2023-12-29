@@ -234,9 +234,15 @@ func (self *SystemdLogContextLogger) Fatal() LogEntry {
 }
 
 func (self *SystemdLogContextLogger) With() LogContext {
+	nd := self.logger.mapBuf.Get().(map[string]any)
+
+	for k, v := range self.dict {
+		nd[k] = v
+	}
+
 	return &SystemdLogContext{
 		logger: self.logger,
-		dict:   self.dict,
+		dict:   nd,
 	}
 }
 

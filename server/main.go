@@ -93,7 +93,7 @@ func main() {
 
 		defer down.Close()
 
-		err = tcp.Pipe(httpTunnel, down)
+		err = tcp.Splice(httpTunnel, down)
 		if err != nil {
 			connLog.Err().Error(0, err)
 			return

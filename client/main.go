@@ -91,7 +91,7 @@ func main() {
 
 		tls := tcp.TlsConnect(down, &tlsConfig)
 
-		err = tcp.Pipe(tc, tls)
+		err = tcp.Splice(tc, tls)
 		if err != nil {
 			connLog.Err().Error(0, err)
 			return

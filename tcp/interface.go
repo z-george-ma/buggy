@@ -38,19 +38,35 @@ type Conn interface {
 	io.ReaderFrom
 }
 
-func onewayCopy(s io.ReaderFrom, d io.Reader, result chan error) {
-	_, err := s.ReadFrom(d)
-	result <- err
+type CopyResult struct {
+	Len int64
+	Err error
+	Dst io.ReaderFrom
 }
 
-func Pipe(dst Conn, src Conn) error {
-	ret := make(chan error, 2)
-	go onewayCopy(dst, src.RawReader(), ret)
-	go onewayCopy(src, dst.RawReader(), ret)
-
-	err := <-ret
-	if err != nil {
-		return err
+func Copy(d io.ReaderFrom, s io.Reader, result chan CopyResult) {
+	n, err := d.ReadFrom(s)
+	result <- CopyResult{
+		Len: n,
+		Err: err,
+		Dst: d,
 	}
-	return <-ret
+}
+
+func Splice(dst Conn, src Conn) error {
+	ret := make(chan CopyResult, 2)
+	go Copy(dst, src.RawReader(), ret)
+	go Copy(src, dst.RawReader(), ret)
+
+	result := <-ret
+	result.Dst.(Conn).CloseWrite()
+
+	if result.Err != nil {
+		return result.Err
+	}
+
+	result = <-ret
+	result.Dst.(Conn).CloseWrite()
+
+	return result.Err
 }
