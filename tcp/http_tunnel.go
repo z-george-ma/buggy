@@ -11,7 +11,7 @@ type HttpTunnelConn struct {
 
 var proxyResponse []byte = []byte("HTTP/1.1 200 OK\r\n\r\n")
 
-func HttpTunnelBind(conn Conn) (ret *HttpTunnelConn, err error) {
+func HttpTunnelAccept(conn Conn) (ret *HttpTunnelConn, err error) {
 
 	ret = &HttpTunnelConn{
 		Conn: conn,

@@ -1,0 +1,13 @@
+[Unit]
+Description=Buggy Client
+
+[Service]
+Environment="REMOTE_URL=https://server"
+Environment="LISTEN_ADDR=:8080"
+ExecStart=/usr/bin/buggy-client
+RestartSec=2
+Restart=always
+Type=simple
+
+[Install]
+WantedBy=default.target

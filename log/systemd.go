@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/binary"
 	"net"
+	"os"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/z-george-ma/buggy/v2/lib"
 )
@@ -16,7 +18,7 @@ type SystemdLogger struct {
 	conn       net.Conn
 	mapBuf     *sync.Pool
 	ch         chan map[string]any
-	onError    func(error) bool
+	onError    func(error, []byte) bool
 	loopCancel context.CancelFunc
 	loopEnded  chan struct{}
 }
@@ -29,16 +31,58 @@ type SystemdLogEntry struct {
 type SystemdLogContext SystemdLogEntry
 type SystemdLogContextLogger SystemdLogContext
 
+func _write(conn net.Conn, buf []byte) error {
+	// UnixConn somehow returns EWOULDBLOCK error at the start
+	// This function works around the issue by calling syscall.Select
+
+	for {
+		_, err := conn.Write(buf)
+
+		if err == nil {
+			return err
+		}
+
+		if e, ok := err.(*net.OpError); ok {
+			if se, ok := e.Err.(*os.SyscallError); ok && se.Err == syscall.EWOULDBLOCK {
+				f, err := conn.(*net.UnixConn).File()
+
+				if err != nil {
+					return err
+				}
+
+				fd := f.Fd()
+				var w syscall.FdSet
+				w.Bits[fd/32] |= (1 << (uint(fd) % 32))
+
+				_, err = syscall.Select(int(fd)+1, nil, &w, nil, nil)
+
+				f.Close()
+				if err != nil {
+					return err
+				}
+				continue
+			}
+		}
+
+		return err
+	}
+
+}
+
 func (self *SystemdLogger) loop(ctx context.Context) {
 	defer close(self.loopEnded)
 	buf := &bytes.Buffer{}
 
 	var m map[string]any
+	var ok bool
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case m = <-self.ch:
+		case m, ok = <-self.ch:
+			if !ok {
+				return
+			}
 		}
 
 		buf.Reset()
@@ -61,15 +105,16 @@ func (self *SystemdLogger) loop(ctx context.Context) {
 		clear(m)
 		self.mapBuf.Put(m)
 
-		_, err := self.conn.Write(buf.Bytes())
+		msg := buf.Bytes()
+		err := _write(self.conn, msg)
 
-		if err != nil && self.onError(err) {
+		if err != nil && self.onError(err, msg) {
 			return
 		}
 	}
 }
 
-func NewLogger(onError func(error) bool) (ret *SystemdLogger, err error) {
+func NewLogger(onError func(error, []byte) bool) (ret *SystemdLogger, err error) {
 	conn, err := net.Dial("unixgram", "/run/systemd/journal/socket")
 
 	if err != nil {

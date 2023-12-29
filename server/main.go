@@ -17,8 +17,9 @@ import (
 )
 
 func main() {
-	logger, err := log.NewLogger(func(err error) bool {
+	logger, err := log.NewLogger(func(err error, msg []byte) bool {
 		stdlog.Output(1, err.Error())
+		stdlog.Print(string(msg))
 		return true
 	})
 
@@ -29,7 +30,7 @@ func main() {
 
 	defer logger.Close(context.Background())
 
-	log := logger.With().Unit("buggy.server").Logger()
+	log := logger.With().Unit("buggy-server").Logger()
 
 	config := conf.LoadConfig[Config]()
 
@@ -63,29 +64,30 @@ func main() {
 	tlsConfig := tls.Config{
 		Certificates: []tls.Certificate{certs},
 		ClientCAs:    certPool,
-		ClientAuth:   tls.VerifyClientCertIfGiven,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
 		MinVersion:   tls.VersionTLS13,
 	}
 
 	server.OnConnect(func(tc *tcp.TcpConn) {
+		connLog := log.With().Value("client_ip", tc.TCPConn.RemoteAddr().String()).Logger()
 		conn := tcp.TlsBind(tc, &tlsConfig)
 		defer conn.Close()
 
 		err := conn.Conn.Handshake()
 		if err != nil {
-			log.Err().Error(0, err)
+			connLog.Err().Error(0, err)
 			return
 		}
 
-		httpTunnel, err := tcp.HttpTunnelBind(conn)
+		httpTunnel, err := tcp.HttpTunnelAccept(conn)
 		if err != nil {
-			log.Err().Error(0, err)
+			connLog.Err().Error(0, err)
 			return
 		}
 
 		down, err := tcp.Connect(httpTunnel.RequestHeader.Url, true, 8192, 0)
 		if err != nil {
-			log.Err().Error(0, err)
+			connLog.Err().Error(0, err)
 			return
 		}
 
@@ -93,7 +95,7 @@ func main() {
 
 		err = tcp.Pipe(httpTunnel, down)
 		if err != nil {
-			log.Err().Error(0, err)
+			connLog.Err().Error(0, err)
 			return
 		}
 	})

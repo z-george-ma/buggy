@@ -17,8 +17,9 @@ import (
 )
 
 func main() {
-	logger, err := log.NewLogger(func(err error) bool {
+	logger, err := log.NewLogger(func(err error, msg []byte) bool {
 		stdlog.Output(1, err.Error())
+		stdlog.Print(string(msg))
 		return true
 	})
 
@@ -29,7 +30,7 @@ func main() {
 
 	defer logger.Close(context.Background())
 
-	log := logger.With().Unit("buggy.client").Logger()
+	log := logger.With().Unit("buggy-client").Logger()
 
 	config := conf.LoadConfig[Config]()
 

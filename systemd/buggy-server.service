@@ -1,0 +1,13 @@
+[Unit]
+Description=Buggy Server
+
+[Service]
+Environment="CLIENT_ROOT_CA=/etc/buggy/rootCA.pem"
+Environment="LISTEN_ADDR=:443"
+ExecStart=/usr/bin/buggy-server
+RestartSec=2
+Restart=always
+Type=simple
+
+[Install]
+WantedBy=default.target
