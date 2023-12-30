@@ -1,26 +1,40 @@
 package tcp
 
-import "net"
+import (
+	"net"
+)
 
-func Connect(address string, tcpNoDelay bool, readerBufSize, writerBufSize int) (*TcpConn, error) {
-	addr, err := net.ResolveTCPAddr("tcp", address)
+type TcpDialer struct {
+	Dialer        *net.Dialer
+	tcpNoDelay    bool
+	readerBufSize int
+	writerBufSize int
+}
 
+func NewDialer(tcpNoDelay bool, readerBufSize, writerBufSize int) *TcpDialer {
+	return &TcpDialer{
+		Dialer:        &net.Dialer{},
+		tcpNoDelay:    tcpNoDelay,
+		readerBufSize: readerBufSize,
+		writerBufSize: writerBufSize,
+	}
+}
+
+func (self *TcpDialer) Dial(address string) (*TcpConn, error) {
+	conn, err := self.Dialer.Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
 
-	conn, err := net.DialTCP("tcp", nil, addr)
-	if err != nil {
-		return nil, err
-	}
+	tcpConn := conn.(*net.TCPConn)
 
-	if !tcpNoDelay {
-		conn.SetNoDelay(tcpNoDelay)
+	if !self.tcpNoDelay {
+		tcpConn.SetNoDelay(self.tcpNoDelay)
 	}
 
 	return &TcpConn{
-		Reader:  NewReader(conn, readerBufSize),
-		Writer:  NewWriter(conn, writerBufSize),
-		TCPConn: conn,
+		Reader:  NewReader(conn, self.readerBufSize),
+		Writer:  NewWriter(conn, self.writerBufSize),
+		TCPConn: tcpConn,
 	}, nil
 }

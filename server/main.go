@@ -36,7 +36,7 @@ func main() {
 
 	sig, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) // alloc
 
-	server := tcp.NewServer(true, 0, 8192, 0, func(err error) bool {
+	server := tcp.NewServer(true, 8192, 0, func(err error) bool {
 		if _, ok := err.(*net.OpError); ok {
 			// accept deadline reached
 			cancel()
@@ -68,6 +68,7 @@ func main() {
 		MinVersion:   tls.VersionTLS13,
 	}
 
+	tcpDialer := tcp.NewDialer(true, 8192, 0)
 	server.OnConnect(func(tc *tcp.TcpConn) {
 		connLog := log.With().Value("client_ip", tc.TCPConn.RemoteAddr().String()).Logger()
 		conn := tcp.TlsBind(tc, &tlsConfig)
@@ -85,7 +86,7 @@ func main() {
 			return
 		}
 
-		down, err := tcp.Connect(httpTunnel.RequestHeader.Url, true, 8192, 0)
+		down, err := tcpDialer.Dial(httpTunnel.RequestHeader.Url)
 		if err != nil {
 			connLog.Err().Error(0, err)
 			return

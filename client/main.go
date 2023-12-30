@@ -43,7 +43,7 @@ func main() {
 
 	sig, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM) // alloc
 
-	server := tcp.NewServer(true, 0, 8192, 0, func(err error) bool {
+	server := tcp.NewServer(true, 8192, 0, func(err error) bool {
 		if _, ok := err.(*net.OpError); ok {
 			// accept deadline reached
 			cancel()
@@ -77,10 +77,12 @@ func main() {
 		RootCAs:      rootCAs,
 	}
 
+	tcpDialer := tcp.NewDialer(true, 8192, 8192)
+
 	server.OnConnect(func(tc *tcp.TcpConn) {
 		defer tc.Close()
 		connLog := log.With().Value("client_ip", tc.TCPConn.RemoteAddr().String()).Logger()
-		down, err := tcp.Connect(serverAddr.Address, true, 8192, 8192)
+		down, err := tcpDialer.Dial(serverAddr.Address)
 
 		if err != nil {
 			connLog.Err().Error(0, err)

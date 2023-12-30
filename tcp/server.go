@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"net"
-	"syscall"
 	"time"
 )
 
 type TcpServer struct {
-	listenConfig  *net.ListenConfig
+	ListenConfig  *net.ListenConfig
 	tcpNoDelay    bool
 	listener      *net.TCPListener
 	onConnect     func(*TcpConn)
@@ -20,22 +19,15 @@ type TcpServer struct {
 	loopEnded     chan struct{}
 }
 
-func NewServer(tcpNoDelay bool, keepAlive time.Duration, readerBufSize, writerBufSize int, onAcceptError func(error) bool) *TcpServer {
-	config := net.ListenConfig{
-		KeepAlive: keepAlive,
-	}
+func NewServer(tcpNoDelay bool, readerBufSize, writerBufSize int, onAcceptError func(error) bool) *TcpServer {
 	return &TcpServer{
-		listenConfig:  &config,
+		ListenConfig:  &net.ListenConfig{},
 		tcpNoDelay:    tcpNoDelay,
 		onAcceptError: onAcceptError,
 		readerBufSize: readerBufSize,
 		writerBufSize: writerBufSize,
 		loopEnded:     make(chan struct{}),
 	}
-}
-
-func (self *TcpServer) OnControl(control func(network, address string, c syscall.RawConn) error) {
-	self.listenConfig.Control = control
 }
 
 func (self *TcpServer) loop(ctx context.Context) {
@@ -90,7 +82,7 @@ func (self *TcpServer) Start(ctx context.Context, network string, address string
 		return errors.New("Another listener has already started")
 	}
 
-	listener, err := self.listenConfig.Listen(ctx, network, address)
+	listener, err := self.ListenConfig.Listen(ctx, network, address)
 	if err != nil {
 		return
 	}
