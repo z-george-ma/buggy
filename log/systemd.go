@@ -44,19 +44,18 @@ func _write(conn net.Conn, buf []byte) error {
 
 		if e, ok := err.(*net.OpError); ok {
 			if se, ok := e.Err.(*os.SyscallError); ok && se.Err == syscall.EWOULDBLOCK {
-				f, err := conn.(*net.UnixConn).File()
+				sc, err := conn.(*net.UnixConn).SyscallConn()
 
-				if err != nil {
-					return err
-				}
+				var fd uintptr
+				sc.Control(func(f uintptr) {
+					fd = f
+				})
 
-				fd := f.Fd()
 				var w syscall.FdSet
 				w.Bits[fd/32] |= (1 << (uint(fd) % 32))
 
 				_, err = syscall.Select(int(fd)+1, nil, &w, nil, nil)
 
-				f.Close()
 				if err != nil {
 					return err
 				}
