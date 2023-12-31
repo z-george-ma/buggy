@@ -36,3 +36,23 @@ func HttpTunnelAccept(conn tcp.Conn) (ret *HttpTunnelConn, err error) {
 
 	return ret, conn.Flush()
 }
+
+func HandleConnection(dialer *tcp.TcpDialer, conn *tcp.TlsConn) (err error) {
+	if err = conn.Conn.Handshake(); err != nil {
+		return
+	}
+
+	httpTunnel, err := HttpTunnelAccept(conn)
+	if err != nil {
+		return
+	}
+
+	down, err := dialer.Dial(httpTunnel.Request.Url)
+	if err != nil {
+		return
+	}
+
+	defer down.Close()
+
+	return tcp.Splice(httpTunnel, down)
+}

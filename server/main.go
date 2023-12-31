@@ -74,28 +74,7 @@ func main() {
 		conn := tcp.TlsBind(tc, &tlsConfig)
 		defer conn.Close()
 
-		err := conn.Conn.Handshake()
-		if err != nil {
-			connLog.Err().Error(0, err)
-			return
-		}
-
-		httpTunnel, err := HttpTunnelAccept(conn)
-		if err != nil {
-			connLog.Err().Error(0, err)
-			return
-		}
-
-		down, err := tcpDialer.Dial(httpTunnel.Request.Url)
-		if err != nil {
-			connLog.Err().Error(0, err)
-			return
-		}
-
-		defer down.Close()
-
-		err = tcp.Splice(httpTunnel, down)
-		if err != nil {
+		if err := HandleConnection(tcpDialer, conn); err != nil {
 			connLog.Err().Error(0, err)
 			return
 		}
