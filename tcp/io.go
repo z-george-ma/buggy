@@ -96,6 +96,8 @@ func (self *ReaderImpl) ReadAll(p *[]byte) (ret []byte, err error) {
 	}
 }
 
+var MaxReadSliceLength int = 8192
+
 // ReadSlice returns a buffer that contains bytes up to (including) delimiter.
 // Note:
 // 1. the buffer may get overwritten when next time Read is called for buffered reader
@@ -116,6 +118,10 @@ func (self *ReaderImpl) ReadSlice(delim byte, p *[]byte) (ret []byte, err error)
 	c := cap(buf)
 
 	for {
+		if l > MaxReadSliceLength {
+			return buf[:l], bufio.ErrBufferFull
+		}
+
 		if l == c {
 			buf = append(buf, 0)[:l]
 			c = cap(buf)

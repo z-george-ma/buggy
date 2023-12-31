@@ -6,7 +6,7 @@ import (
 
 type HttpTunnelConn struct {
 	Conn
-	RequestHeader HttpRequestHeader
+	Request HttpRequest
 }
 
 var proxyResponse []byte = []byte("HTTP/1.1 200 OK\r\n\r\n")
@@ -17,13 +17,13 @@ func HttpTunnelAccept(conn Conn) (ret *HttpTunnelConn, err error) {
 		Conn: conn,
 	}
 
-	ret.RequestHeader, err = ParseHttpHeader(conn)
+	ret.Request, err = ParseHttpRequest(conn)
 	if err != nil {
 		return
 	}
 
-	if ret.RequestHeader.Method != "CONNECT" {
-		err = fmt.Errorf("Method %s not supported", ret.RequestHeader.Method)
+	if ret.Request.Method != "CONNECT" {
+		err = fmt.Errorf("Method %s not supported", ret.Request.Method)
 		return
 	}
 

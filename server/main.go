@@ -86,7 +86,7 @@ func main() {
 			return
 		}
 
-		down, err := tcpDialer.Dial(httpTunnel.RequestHeader.Url)
+		down, err := tcpDialer.Dial(httpTunnel.Request.Url)
 		if err != nil {
 			connLog.Err().Error(0, err)
 			return

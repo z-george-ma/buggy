@@ -7,7 +7,7 @@ import (
 type Reader interface {
 	// read once, up to len(p) bytes into p
 	io.Reader
-	// read up to full len(p) bytes into p
+	// ReadFull read up to full length of input slice
 	ReadFull(p []byte) (n int, err error)
 	// ReadAll reads until EOF. p is optional parameter to supply buffer
 	ReadAll(p *[]byte) (b []byte, err error)
