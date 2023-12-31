@@ -150,32 +150,38 @@ func (self *SystemdLogger) Close(ctx context.Context) {
 }
 
 func (self *SystemdLogger) createLogger(logLevel int, dict map[string]any) LogEntry {
-	dict["PRIORITY"] = logLevel
+	nd := self.mapBuf.Get().(map[string]any)
+
+	for k, v := range dict {
+		nd[k] = v
+	}
+
+	nd["PRIORITY"] = logLevel
 
 	return &SystemdLogEntry{
 		logger: self,
-		dict:   dict,
+		dict:   nd,
 	}
 }
 
 func (self *SystemdLogger) Debug() LogEntry {
-	return self.createLogger(7, self.mapBuf.Get().(map[string]any))
+	return self.createLogger(7, nil)
 }
 
 func (self *SystemdLogger) Info() LogEntry {
-	return self.createLogger(6, self.mapBuf.Get().(map[string]any))
+	return self.createLogger(6, nil)
 }
 
 func (self *SystemdLogger) Warn() LogEntry {
-	return self.createLogger(4, self.mapBuf.Get().(map[string]any))
+	return self.createLogger(4, nil)
 }
 
 func (self *SystemdLogger) Err() LogEntry {
-	return self.createLogger(3, self.mapBuf.Get().(map[string]any))
+	return self.createLogger(3, nil)
 }
 
 func (self *SystemdLogger) Fatal() LogEntry {
-	return self.createLogger(2, self.mapBuf.Get().(map[string]any))
+	return self.createLogger(2, nil)
 }
 
 func (self *SystemdLogger) With() LogContext {
