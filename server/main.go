@@ -69,7 +69,7 @@ func main() {
 	}
 
 	tcpDialer := tcp.NewDialer(true, 8192, 0)
-	server.OnConnect(func(tc *tcp.TcpConn) {
+	server.OnConnect(func(ctx context.Context, tc *tcp.TcpConn) {
 		connLog := log.With().Value("client_ip", tc.TCPConn.RemoteAddr().String()).Logger()
 		conn := tcp.TlsBind(tc, &tlsConfig)
 		defer conn.Close()

@@ -11,7 +11,7 @@ type TcpServer struct {
 	ListenConfig  *net.ListenConfig
 	tcpNoDelay    bool
 	listener      *net.TCPListener
-	onConnect     func(*TcpConn)
+	onConnect     func(context.Context, *TcpConn)
 	onAcceptError func(error) bool
 	readerBufSize int
 	writerBufSize int
@@ -53,7 +53,7 @@ func (self *TcpServer) loop(ctx context.Context) {
 				}
 			}
 
-			go self.onConnect(&TcpConn{
+			go self.onConnect(ctx, &TcpConn{
 				Reader:  NewReader(conn, self.readerBufSize),
 				Writer:  NewWriter(conn, self.writerBufSize),
 				TCPConn: conn,
@@ -98,6 +98,6 @@ func (self *TcpServer) Start(ctx context.Context, network string, address string
 	return
 }
 
-func (self *TcpServer) OnConnect(connect func(*TcpConn)) {
+func (self *TcpServer) OnConnect(connect func(context.Context, *TcpConn)) {
 	self.onConnect = connect
 }
