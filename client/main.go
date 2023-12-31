@@ -79,7 +79,7 @@ func main() {
 
 	tcpDialer := tcp.NewDialer(true, 8192, 8192)
 
-	server.OnConnect(func(tc *tcp.TcpConn) {
+	server.OnConnect(func(ctx context.Context, tc *tcp.TcpConn) {
 		defer tc.Close()
 		connLog := log.With().Value("client_ip", tc.TCPConn.RemoteAddr().String()).Logger()
 		down, err := tcpDialer.Dial(serverAddr.Address)
