@@ -6,47 +6,58 @@ import (
 )
 
 type ReaderImpl struct {
-	reader io.Reader
-	buf    *bufio.Reader
+	reader             io.Reader
+	rawReader          io.Reader
+	buf                *bufio.Reader
+	snapshot           *[]byte
+	maxSnapshotBufSize int
 }
 
 // NewReader creates a reader.
 // bufferSize: 0 for unbuffered reader. Otherwise use buffered reader.
 func NewReader(rd io.Reader, bufferSize int) *ReaderImpl {
 	ret := ReaderImpl{
-		reader: rd,
+		rawReader: rd,
 	}
 
 	if bufferSize > 0 {
 		ret.buf = bufio.NewReaderSize(rd, bufferSize)
+		ret.reader = ret.buf
+	} else {
+		ret.reader = rd
 	}
 
 	return &ret
 }
 
 func (self *ReaderImpl) Read(p []byte) (n int, err error) {
-	var rd io.Reader
-	if self.buf != nil {
-		rd = self.buf
-	} else {
-		rd = self.reader
+	if self.snapshot == nil {
+		return self.reader.Read(p)
 	}
 
-	return rd.Read(p)
+	n, err = self.reader.Read(p)
+
+	if n > 0 {
+		buf := *self.snapshot
+		l := len(buf)
+		bytesToAppend := l + n - self.maxSnapshotBufSize
+
+		if bytesToAppend <= 0 {
+			*self.snapshot = append(buf, p[:n]...)
+			return
+		}
+
+		*self.snapshot = append(buf, p[:bytesToAppend]...)
+		err = bufio.ErrBufferFull
+	}
+	return
 }
 
 func (self *ReaderImpl) ReadFull(p []byte) (n int, err error) {
-	var rd io.Reader
-	if self.buf != nil {
-		rd = self.buf
-	} else {
-		rd = self.reader
-	}
-
 	read := 0
 	l := len(p)
 	for n < l {
-		read, err = rd.Read(p[n:])
+		read, err = self.Read(p[n:])
 		n += read
 
 		if err != nil {
@@ -58,13 +69,6 @@ func (self *ReaderImpl) ReadFull(p []byte) (n int, err error) {
 }
 
 func (self *ReaderImpl) ReadAll(p *[]byte) (ret []byte, err error) {
-	var rd io.Reader
-	if self.buf != nil {
-		rd = self.buf
-	} else {
-		rd = self.reader
-	}
-
 	var buf []byte
 
 	if p != nil {
@@ -80,7 +84,7 @@ func (self *ReaderImpl) ReadAll(p *[]byte) (ret []byte, err error) {
 			c = cap(buf)
 		}
 
-		n, err = rd.Read(buf[l:c])
+		n, err = self.Read(buf[l:c])
 		l += n
 		buf = buf[:l]
 		if err != nil {
@@ -145,6 +149,33 @@ func (self *ReaderImpl) ReadSlice(delim byte, p *[]byte) (ret []byte, err error)
 			return buf[:l], nil
 		}
 	}
+}
+
+func (self *ReaderImpl) SetSnapshot(p *[]byte, maxBufSize int) {
+	var buf []byte
+
+	if p != nil {
+		self.snapshot = p
+		buf = *p
+	} else {
+		self.snapshot = &buf
+	}
+
+	self.maxSnapshotBufSize = maxBufSize
+
+}
+
+func (self *ReaderImpl) GetSnapshot(clearSnapshot bool) (ret []byte) {
+	if self.snapshot != nil {
+		ret = *self.snapshot
+
+		if clearSnapshot {
+			self.snapshot = nil
+			self.maxSnapshotBufSize = 0
+		}
+	}
+
+	return ret
 }
 
 func (self *ReaderImpl) Reset(rd io.Reader) {

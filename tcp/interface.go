@@ -13,9 +13,10 @@ type Reader interface {
 	ReadAll(p *[]byte) (b []byte, err error)
 	// ReadSlice reads until delimiter. p is optional parameter to supply buffer
 	ReadSlice(delim byte, p *[]byte) ([]byte, error)
-	// set snapshot
-	// seek
-	// set deadline
+
+	// SetSnapshot stores read bytes in p (if given).
+	SetSnapshot(p *[]byte, maxBufSize int)
+	GetSnapshot(clearSnapshot bool) []byte
 }
 
 type Writer interface {
