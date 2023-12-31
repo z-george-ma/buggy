@@ -1,23 +1,25 @@
-package tcp
+package main
 
 import (
 	"fmt"
+
+	"github.com/z-george-ma/buggy/v2/tcp"
 )
 
 type HttpTunnelConn struct {
-	Conn
-	Request HttpRequest
+	tcp.Conn
+	Request tcp.HttpRequest
 }
 
 var proxyResponse []byte = []byte("HTTP/1.1 200 OK\r\n\r\n")
 
-func HttpTunnelAccept(conn Conn) (ret *HttpTunnelConn, err error) {
+func HttpTunnelAccept(conn tcp.Conn) (ret *HttpTunnelConn, err error) {
 
 	ret = &HttpTunnelConn{
 		Conn: conn,
 	}
 
-	ret.Request, err = ParseHttpRequest(conn)
+	ret.Request, err = tcp.ParseHttpRequest(conn)
 	if err != nil {
 		return
 	}

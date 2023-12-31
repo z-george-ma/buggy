@@ -80,7 +80,7 @@ func main() {
 			return
 		}
 
-		httpTunnel, err := tcp.HttpTunnelAccept(conn)
+		httpTunnel, err := HttpTunnelAccept(conn)
 		if err != nil {
 			connLog.Err().Error(0, err)
 			return
